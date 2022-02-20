@@ -4,10 +4,11 @@ import struct
 import time
 import micropython
 import machine
-
+from machine import I2C, Pin
+from bmp280 import BMP280
 from ble_advertising import decode_services, decode_name
-
 from micropython import const
+
 
 _IRQ_CENTRAL_CONNECT = const(1)
 _IRQ_CENTRAL_DISCONNECT = const(2)
@@ -193,10 +194,11 @@ class BLESimpleCentral:
         self._notify_callback = callback
 
 
-def demo():
+def data_transfer_demo():
     ble = bluetooth.BLE()
     central = BLESimpleCentral(ble)
-
+	i2c = I2C(scl=Pin(21), sda=Pin(22))
+    bmp_sensor = BMP280(i2c)
     not_found = False
 
     def on_scan(addr_type, addr, name):
@@ -230,22 +232,19 @@ def demo():
 
     with_response = False
 
-    i = 0
     if central.is_connected():
         try:
-            v = f"{time.localtime()}"
-            print("TX", v)
-            central.write(v, with_response)
+            readings = f"{bmp_sensor.temperature},{bmp_sensor.pressure}"
+            print("TX", readings)
+            central.write(readings, with_response)
         except:
             print("TX failed")
     central.disconnect()
     if central.is_connected():
         print("Disconnected")
-        #machine.deepsleep(15000)
-    #
 
 
 if __name__ == "__main__":
-    demo()
+    data_transfer_demo()
     time.sleep(0.5)
     machine.deepsleep(15000)
